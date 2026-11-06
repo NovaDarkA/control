@@ -9,7 +9,7 @@ export interface ProyectoResumen {
   tareasTotal:number; tareasHechas:number
 }
 export interface InfoApp { version:string; rutaDatos:string }
-export interface Tarea { id:number; proyectoId:number; titulo:string; hecha:boolean; creadoEn:string }
+export interface Hito { id:number; proyectoId:number; titulo:string; creadoEn:string }\nexport interface Tarea { id:number; proyectoId:number; titulo:string; hecha:boolean; creadoEn:string }
 export interface EventoSesion { id:number; tipo:string; texto:string; creadoEn:string }
 export interface Sesion {
   id:string; proyectoId:number; proyectoNombre:string; motivo:string; objetivo:string;
@@ -24,7 +24,7 @@ export interface ApiProjectControl {
   listarProyectos():Promise<ProyectoResumen[]>;
   infoApp():Promise<InfoApp>;
   actualizarProyecto(data:{id:number;nombre:string;descripcion:string;objetivo:string;estado:EstadoProyecto;proximoPaso:string}):Promise<void>;
-  listarTareas(proyectoId:number):Promise<Tarea[]>;
+  listarTareas(proyectoId:number):Promise<Tarea[]>;\n  listarHitos(proyectoId:number):Promise<Hito[]>;\n  agregarHito(data:{proyectoId:number;titulo:string}):Promise<void>;\n  eliminarHito(id:number):Promise<void>;
   agregarTarea(data:{proyectoId:number;titulo:string}):Promise<void>;
   cambiarTarea(data:{id:number;hecha:boolean}):Promise<void>;
   eliminarTarea(id:number):Promise<void>;
