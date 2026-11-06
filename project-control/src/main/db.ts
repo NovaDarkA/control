@@ -29,6 +29,7 @@ export function abrirBaseDeDatos(): Database.Database {
 
   migrar(d, carpeta, existia)
   sembrarProyectos(d)
+  recuperarSesionInterrumpida(d)
   conexion = d
   return d
 }
@@ -69,4 +70,24 @@ export function cerrarBaseDeDatos(): void {
     conexion.close()
     conexion = null
   }
+}
+
+
+/**
+ * Al reiniciar, el tiempo transcurrido desde el último latido no se considera trabajo.
+ * La sesión queda pausada para que el usuario decida si la reanuda.
+ */
+function recuperarSesionInterrumpida(d: Database.Database): void {
+  const s = d.prepare("SELECT id, estado, ultimo_latido FROM sesion WHERE abierta = 1 AND estado = 'activa'").get() as
+    | { id: string; estado: string; ultimo_latido: string }
+    | undefined
+  if (!s) return
+  const ahora = new Date().toISOString()
+  d.transaction(() => {
+    d.prepare("INSERT INTO evento_sesion(sesion_id, tipo, texto, creado_en, hasta_en) VALUES(?, 'sin_actividad', 'Intervalo con la aplicación cerrada', ?, ?)")
+      .run(s.id, s.ultimo_latido, ahora)
+    d.prepare("INSERT INTO evento_sesion(sesion_id, tipo, texto, creado_en) VALUES(?, 'pausa', 'Sesión pausada por cierre inesperado', ?)")
+      .run(s.id, ahora)
+    d.prepare("UPDATE sesion SET estado = 'pausada', ultimo_latido = ? WHERE id = ?").run(ahora, s.id)
+  })()
 }
