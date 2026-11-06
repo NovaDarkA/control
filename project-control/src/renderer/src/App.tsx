@@ -1,98 +1,41 @@
-import { useEffect, useState } from 'react'
-import { ETIQUETA_ESTADO, type EstadoProyecto, type ProyectoResumen } from '../../shared/types'
-
-function progreso(p: ProyectoResumen): string {
-  if (p.tareasTotal === 0) return 'Sin definir'
-  return `${Math.round((p.tareasHechas / p.tareasTotal) * 100)} % · ${p.tareasHechas} de ${p.tareasTotal} tareas`
-}
-
-export function App() {
-  const [proyectos, setProyectos] = useState<ProyectoResumen[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    window.api
-      .listarProyectos()
-      .then(setProyectos)
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
-  }, [])
-
-  const cuenta = (estado: EstadoProyecto) =>
-    proyectos?.filter((p) => p.estado === estado).length ?? 0
-  const conPaso = proyectos?.filter((p) => p.proximoPaso) ?? []
-
-  return (
-    <div className="app">
-      <nav className="lateral" aria-label="Secciones">
-        <div className="marca">Project Control</div>
-        <a className="activo" aria-current="page">Panel</a>
-        <span className="pendiente" title="Disponible en una fase posterior">Proyectos</span>
-        <span className="pendiente" title="Disponible en una fase posterior">Historial</span>
-        <span className="pendiente" title="Disponible en una fase posterior">Respaldos</span>
-      </nav>
-
-      <main className="contenido">
-        <section className="sesion-actual">
-          <div>
-            <h2>Sesión actual</h2>
-            <p>No hay ninguna sesión en curso.</p>
-          </div>
-          <button disabled title="Disponible en una fase posterior">
-            Iniciar sesión
-          </button>
-        </section>
-
-        {error && <p role="alert" className="error">No se pudieron cargar los proyectos: {error}</p>}
-
-        {proyectos && (
-          <>
-            <section className="resumen" aria-label="Resumen de proyectos">
-              <p><strong>{proyectos.length}</strong> proyectos</p>
-              <p><strong>{cuenta('en_progreso')}</strong> en progreso</p>
-              <p><strong>{cuenta('en_pausa')}</strong> en pausa</p>
-              <p><strong>{cuenta('bloqueado')}</strong> bloqueados</p>
-              <p><strong>{cuenta('completado')}</strong> completados</p>
-            </section>
-
-            <section>
-              <h2>Proyectos</h2>
-              <ul className="lista">
-                {proyectos.map((p) => (
-                  <li key={p.id}>
-                    <div className="fila-titulo">
-                      <span className="nombre">{p.nombre}</span>
-                      <span className={`estado estado-${p.estado}`}>{ETIQUETA_ESTADO[p.estado]}</span>
-                    </div>
-                    <div className="detalle">
-                      <span>Progreso: {progreso(p)}</span>
-                      <span>Último avance: {p.ultimoAvance ?? 'Sin registrar'}</span>
-                      <span>Próximo paso: {p.proximoPaso ?? 'Sin definir'}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section>
-              <h2>Próximos pasos</h2>
-              {conPaso.length === 0 ? (
-                <p className="vacio">Aún no hay próximos pasos. Se registran al cerrar una sesión.</p>
-              ) : (
-                <ul className="pasos">
-                  {conPaso.map((p) => (
-                    <li key={p.id}><strong>{p.nombre}:</strong> {p.proximoPaso}</li>
-                  ))}
-                </ul>
-              )}
-            </section>
-
-            <section>
-              <h2>Última actividad</h2>
-              <p className="vacio">Aún no hay actividad registrada.</p>
-            </section>
-          </>
-        )}
-      </main>
-    </div>
-  )
+import {useEffect,useState} from 'react'
+import {ETIQUETA_ESTADO,type EstadoProyecto,type ProyectoResumen,type Tarea,type Sesion} from '../../shared/types'
+type Tab='panel'|'proyectos'|'historial'|'respaldos'
+const estados:EstadoProyecto[]=['por_iniciar','en_progreso','en_pausa','bloqueado','completado']
+const dt=(v:string|null)=>v?new Date(v).toLocaleString():'—'
+const dur=(v:number)=>Math.floor(v/3600)+'h '+Math.floor(v%3600/60)+'m'
+export function App(){
+ const [tab,T]=useState<Tab>('panel'),[ps,P]=useState<ProyectoResumen[]>([]),[sel,S]=useState<number|null>(null),[tasks,Q]=useState<Tarea[]>([]),[session,U]=useState<Sesion|null>(null),[history,H]=useState<Sesion[]>([]),[events,E]=useState<any[]>([]),[info,I]=useState<any>(null),[err,X]=useState(''),[modal,M]=useState(''),[edit,D]=useState(false),[taskName,N]=useState(''),[filter,F]=useState<number|undefined>(),[backup,B]=useState('')
+ const [pf,PF]=useState<any>({nombre:'',descripcion:'',objetivo:'',estado:'por_iniciar',proximoPaso:''})
+ const [sf,SF]=useState<any>({proyectoId:0,motivo:'',objetivo:'',prioridad:'media'})
+ const [ev,V]=useState<any>({tipo:'actividad',texto:''})
+ const [close,C]=useState<any>({actividadesCompletadas:'',resultados:'',decisiones:'',problemasPendientes:'',tareasSinTerminar:'',siguientePaso:''})
+ const project=ps.find(p=>p.id===sel)
+ async function refresh(){try{const [a,b,c]=await Promise.all([window.api.listarProyectos(),window.api.sesionActual(),window.api.infoApp()]);P(a);U(b);I(c);X('')}catch(e){X(String(e))}}
+ async function act(f:()=>Promise<any>){try{await f();await refresh();if(sel!==null)Q(await window.api.listarTareas(sel));if(tab==='historial')H(await window.api.historial(filter))}catch(e){X(String(e))}}
+ useEffect(()=>{void refresh();const id=window.setInterval(()=>void window.api.latido(),10000);return()=>clearInterval(id)},[])
+ useEffect(()=>{if(sel!==null)void window.api.listarTareas(sel).then(Q)},[sel])
+ useEffect(()=>{if(tab==='historial')void window.api.historial(filter).then(H)},[tab,filter])
+ useEffect(()=>{if(project)PF({nombre:project.nombre,descripcion:project.descripcion,objetivo:project.objetivo,estado:project.estado,proximoPaso:project.proximoPaso??''})},[project?.id,ps])
+ async function addTask(){if(!taskName.trim()||sel===null)return;await act(()=>window.api.agregarTarea({proyectoId:sel,titulo:taskName}));N('')}
+ async function start(){await act(()=>window.api.iniciarSesion(sf));M('')}
+ async function log(){await act(()=>window.api.registrarEvento(ev));M('');V({tipo:'actividad',texto:''})}
+ async function finish(){await act(()=>window.api.cerrarSesion(close));M('')}
+ async function exportDb(){try{const p=await window.api.exportarRespaldo();B(p||'Exportación cancelada')}catch(e){X(String(e))}}
+ const count=(s:EstadoProyecto)=>ps.filter(p=>p.estado===s).length
+ return <div className="app"><aside className="sidebar"><div className="brand">PROJECT CONTROL<small>GESTIÓN LOCAL · V1</small></div>{(['panel','proyectos','historial','respaldos'] as Tab[]).map(x=><button className={tab===x?'nav active':'nav'} onClick={()=>{T(x);S(null)}} key={x}>{({panel:'Panel',proyectos:'Proyectos',historial:'Historial',respaldos:'Respaldos'})[x]}</button>)}<small className="sidefoot">Sin cuenta · Sin nube</small></aside>
+ <main className="main"><header><div><small>CONTROL DE TRABAJO</small><h1>{{panel:'Panel general',proyectos:'Proyectos',historial:'Historial de sesiones',respaldos:'Respaldos'}[tab]}</h1></div><span>{new Date().toLocaleDateString()}</span></header>{err&&<div className="error">{err}<button onClick={()=>X('')}>×</button></div>}
+ {tab==='panel'&&<><section className="session"><div><small>SESIÓN ACTUAL</small>{session?<><h2>{session.proyectoNombre}</h2><p>{session.objetivo} · {session.estado==='pausada'?'Pausada':'En curso'}</p></>:<><h2>Sin sesión activa</h2><p>Inicia una sesión para registrar avances y mantener continuidad.</p></>}</div>{session?<div className="actions">{session.estado==='activa'?<button className="alt" onClick={()=>void act(()=>window.api.pausarSesion())}>Pausar</button>:<button onClick={()=>void act(()=>window.api.reanudarSesion())}>Reanudar</button>}<button className="alt" onClick={()=>M('evento')}>Registrar evento</button><button onClick={()=>M('cerrar')}>Cerrar sesión</button></div>:<button onClick={()=>{SF({...sf,proyectoId:ps[0]?.id??0});M('iniciar')}}>＋ Iniciar sesión</button>}</section>
+ <div className="stats">{[['Proyectos',ps.length],['En progreso',count('en_progreso')],['En pausa',count('en_pausa')],['Bloqueados',count('bloqueado')],['Completados',count('completado')]].map(([l,n])=><article key={String(l)}><b>{n}</b><span>{l}</span></article>)}</div>
+ <section className="panel"><div className="heading"><h2>Proyectos</h2><button className="link" onClick={()=>T('proyectos')}>Ver todos →</button></div><div className="cards">{ps.map(p=><button className="project" key={p.id} onClick={()=>{S(p.id);T('proyectos')}}><div className="heading"><b>{p.nombre}</b><small>{ETIQUETA_ESTADO[p.estado]}</small></div><p>{p.descripcion||'Sin descripción'}</p><div className="bar"><i style={{width:(p.tareasTotal?100*p.tareasHechas/p.tareasTotal:0)+'%'}}/></div><small>{p.tareasTotal?p.tareasHechas+'/'+p.tareasTotal+' tareas':'Sin tareas'}</small><p>Siguiente: {p.proximoPaso||'Por definir'}</p></button>)}</div></section>
+ <section className="panel"><h2>Continuidad reciente</h2>{history.slice(0,4).map(s=><p className="historyrow" key={s.id}>{s.proyectoNombre} · {dt(s.inicioEn)} · {dur(s.tiempoEfectivo)}</p>)}{history.length===0&&<p className="muted">Las sesiones cerradas aparecerán aquí.</p>}<button className="link" onClick={()=>T('historial')}>Abrir historial →</button></section></>}
+ {tab==='proyectos'&&<section className="panel">{sel===null?<><h2>Todos los proyectos</h2>{ps.map(p=><button className="projectrow" key={p.id} onClick={()=>S(p.id)}><b>{p.nombre}</b><span>{ETIQUETA_ESTADO[p.estado]}</span><small>{p.tareasHechas}/{p.tareasTotal} tareas →</small></button>)}</>:project&&<><button className="link" onClick={()=>S(null)}>← Todos los proyectos</button><div className="heading"><h2>{project.nombre}</h2><button className="alt" onClick={()=>D(!edit)}>{edit?'Cancelar':'Editar'}</button></div>{edit?<div className="formgrid"><label>Nombre<input value={pf.nombre} onChange={e=>PF({...pf,nombre:e.target.value})}/></label><label>Estado<select value={pf.estado} onChange={e=>PF({...pf,estado:e.target.value})}>{estados.map(s=><option value={s} key={s}>{ETIQUETA_ESTADO[s]}</option>)}</select></label><label>Descripción<textarea value={pf.descripcion} onChange={e=>PF({...pf,descripcion:e.target.value})}/></label><label>Objetivo<textarea value={pf.objetivo} onChange={e=>PF({...pf,objetivo:e.target.value})}/></label><label>Próximo paso<input value={pf.proximoPaso} onChange={e=>PF({...pf,proximoPaso:e.target.value})}/></label><button onClick={()=>void act(()=>window.api.actualizarProyecto({id:project.id,...pf})).then(()=>D(false))}>Guardar</button></div>:<><p>{project.descripcion}</p><p>{project.objetivo}</p><span>{ETIQUETA_ESTADO[project.estado]}</span></>}
+ <h3>Tareas</h3><div className="actions"><input placeholder="Nueva tarea" value={taskName} onChange={e=>N(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')void addTask()}}/><button onClick={()=>void addTask()}>Agregar</button></div>{tasks.map(t=><div className="task" key={t.id}><label><input type="checkbox" checked={t.hecha} onChange={e=>void act(()=>window.api.cambiarTarea({id:t.id,hecha:e.target.checked}))}/><span className={t.hecha?'done':''}>{t.titulo}</span></label><button className="link" onClick={()=>void act(()=>window.api.eliminarTarea(t.id))}>Eliminar</button></div>)}{tasks.length===0&&<p className="muted">Sin tareas registradas.</p>}<h3>Sesiones</h3><button onClick={()=>{SF({...sf,proyectoId:project.id});M('iniciar')}}>Iniciar sesión en este proyecto</button><button className="link" onClick={()=>{F(project.id);T('historial')}}>Ver historial →</button></>}</section>}
+ {tab==='historial'&&<section className="panel"><div className="heading"><h2>Sesiones cerradas</h2><select value={filter??''} onChange={e=>F(e.target.value?Number(e.target.value):undefined)}><option value="">Todos los proyectos</option>{ps.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>{history.map(s=><article className="history" key={s.id}><div className="heading"><b>{s.proyectoNombre}</b><b>{dur(s.tiempoEfectivo)}</b></div><small>{dt(s.inicioEn)} — {dt(s.cierreEn)}</small><p>Motivo: {s.motivo}</p><p>Objetivo: {s.objetivo}</p><p>Próximo paso: {s.siguientePaso||'—'}</p><button className="link" onClick={()=>void window.api.eventosSesion(s.id).then(E)}>Ver eventos</button>{events.map(e=><p className="event" key={e.id}>{dt(e.creadoEn)} · {e.tipo}: {e.texto}</p>)}</article>)}{history.length===0&&<p className="muted">No hay sesiones registradas.</p>}</section>}
+ {tab==='respaldos'&&<section className="panel"><h2>Respaldos locales</h2><p>Exporta una copia completa de la base de datos SQLite con proyectos, tareas, sesiones e historial.</p><p className="path">Carpeta de datos: {info?.rutaDatos}</p><button onClick={()=>void exportDb()}>Exportar respaldo (.db)</button>{backup&&<p className="muted">{backup}</p>}<p className="muted">Los datos se conservan fuera de la carpeta de instalación y no se eliminan al desinstalar.</p></section>}</main>
+ {modal&&<div className="overlay"><form className="dialog" onSubmit={e=>{e.preventDefault();if(modal==='iniciar')void start();if(modal==='evento')void log();if(modal==='cerrar')void finish()}}><div className="heading"><h2>{modal==='iniciar'?'Iniciar sesión':modal==='evento'?'Registrar evento':'Cerrar sesión'}</h2><button type="button" className="link" onClick={()=>M('')}>×</button></div>
+ {modal==='iniciar'&&<><label>Proyecto<select required value={sf.proyectoId} onChange={e=>SF({...sf,proyectoId:Number(e.target.value)})}><option value={0} disabled>Seleccionar</option>{ps.filter(p=>p.estado!=='completado').map(p=><option value={p.id} key={p.id}>{p.nombre}</option>)}</select></label><label>Motivo<input required value={sf.motivo} onChange={e=>SF({...sf,motivo:e.target.value})}/></label><label>Objetivo<input required value={sf.objetivo} onChange={e=>SF({...sf,objetivo:e.target.value})}/></label><label>Prioridad<select value={sf.prioridad} onChange={e=>SF({...sf,prioridad:e.target.value})}><option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option></select></label></>}
+ {modal==='evento'&&<><label>Tipo<select value={ev.tipo} onChange={e=>V({...ev,tipo:e.target.value})}>{['actividad','avance','resultado_parcial','decision','problema','interrupcion'].map(x=><option key={x} value={x}>{x}</option>)}</select></label><label>Descripción<textarea required value={ev.texto} onChange={e=>V({...ev,texto:e.target.value})}/></label></>}
+ {modal==='cerrar'&&<>{Object.entries({actividadesCompletadas:'Actividades completadas',resultados:'Resultados',decisiones:'Decisiones',problemasPendientes:'Problemas pendientes',tareasSinTerminar:'Tareas sin terminar',siguientePaso:'Próximo paso (obligatorio)'}).map(([k,l])=><label key={k}>{l}{k==='siguientePaso'?<input required value={close[k]} onChange={e=>C({...close,[k]:e.target.value})}/>:<textarea value={close[k]} onChange={e=>C({...close,[k]:e.target.value})}/>}</label>)}</>}
+ <div className="actions"><button type="button" className="alt" onClick={()=>M('')}>Cancelar</button><button type="submit">Confirmar</button></div></form></div>}</div>
 }
