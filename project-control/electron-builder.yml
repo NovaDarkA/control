@@ -1,0 +1,25 @@
+appId: local.projectcontrol.app
+productName: Project Control
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**
+  - package.json
+asarUnpack:
+  - node_modules/better-sqlite3/**
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: ProjectControl-Setup-${version}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: Project Control
+  # Los datos viven en %APPDATA%\ProjectControl, fuera de la carpeta de instalación.
+  # Desinstalar NUNCA debe borrarlos.
+  deleteAppDataOnUninstall: false
