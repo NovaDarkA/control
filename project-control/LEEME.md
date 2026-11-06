@@ -16,3 +16,7 @@ Los datos se guardan en `%APPDATA%\ProjectControl`. Desinstalar no los borra.
 
 ## Desarrollo local (opcional)
 `npm install` → `npm run dev`
+
+
+## Compilación actual
+El instalador de Windows se genera mediante GitHub Actions al actualizar el proyecto. Los datos de usuario se almacenan en `%APPDATA%\\ProjectControl`.
