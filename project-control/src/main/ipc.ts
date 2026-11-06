@@ -12,7 +12,7 @@ function sesionAbierta(){
 function tiempoEfectivo(s:any):number {
   const fin=s.cierre_en ? new Date(s.cierre_en).getTime() : Date.now()
   let total=Math.max(0,fin-new Date(s.inicio_en).getTime())
-  const pausas=db().prepare(`SELECT creado_en,tipo FROM evento_sesion WHERE sesion_id=? AND tipo IN ('pausa','reanudacion','sin_actividad') ORDER BY creado_en,id`).all(s.id) as any[]
+  const pausas=db().prepare(`SELECT creado_en,hasta_en,tipo FROM evento_sesion WHERE sesion_id=? AND tipo IN ('pausa','reanudacion','sin_actividad') ORDER BY creado_en,id`).all(s.id) as any[]
   let pausaDesde:number|null=null
   for(const e of pausas){
     const t=new Date(e.creado_en).getTime()
