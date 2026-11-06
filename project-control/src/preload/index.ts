@@ -4,7 +4,7 @@ const api:ApiProjectControl = {
   listarProyectos:()=>ipcRenderer.invoke('proyectos:listar'),
   infoApp:()=>ipcRenderer.invoke('app:info'),
   actualizarProyecto:(data)=>ipcRenderer.invoke('proyectos:actualizar',data),
-  listarTareas:(id)=>ipcRenderer.invoke('tareas:listar',id),
+  listarTareas:(id)=>ipcRenderer.invoke('tareas:listar',id),\n  listarHitos:(id)=>ipcRenderer.invoke('hitos:listar',id),\n  agregarHito:(data)=>ipcRenderer.invoke('hitos:agregar',data),\n  eliminarHito:(id)=>ipcRenderer.invoke('hitos:eliminar',id),
   agregarTarea:(data)=>ipcRenderer.invoke('tareas:agregar',data),
   cambiarTarea:(data)=>ipcRenderer.invoke('tareas:cambiar',data),
   eliminarTarea:(id)=>ipcRenderer.invoke('tareas:eliminar',id),
